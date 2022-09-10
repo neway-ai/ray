@@ -246,12 +246,8 @@ class MultiAgentPrioritizedReplayBuffer(
             prio_dict: A dictionary containing td_errors for
             batches saved in underlying replay buffers.
         """
-        with self.update_priorities_timer:
-            for policy_id, (batch_indexes, td_errors) in prio_dict.items():
-                new_priorities = np.abs(td_errors) + self.prioritized_replay_eps
-                self.replay_buffers[policy_id].update_priorities(
-                    batch_indexes, new_priorities
-                )
+        # We don't do anything here
+        pass
 
     @DeveloperAPI
     @override(MultiAgentReplayBuffer)

@@ -1,8 +1,10 @@
 from typing import Dict
 import logging
 import numpy as np
+import torch
 
 from ray.rllib.utils.annotations import override
+from ray.rllib.models.catalog import ModelCatalog
 from ray.rllib.utils.replay_buffers.multi_agent_replay_buffer import (
     MultiAgentReplayBuffer,
     ReplayMode,
@@ -24,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 @DeveloperAPI
-class MultiAgentPrioritizedReplayBuffer(
+class MultiAgentExperimentalReplayBuffer(
     MultiAgentReplayBuffer, PrioritizedReplayBuffer
 ):
     def __init__(
@@ -81,9 +83,6 @@ class MultiAgentPrioritizedReplayBuffer(
                 prioritized_replay_eps: 0.5}
             ``**kwargs``: Forward compatibility kwargs.
         """
-        if replay_mode == "lockstep":
-            raise ValueError("Only `replay_mode=independent` allowed.")
-
         if underlying_buffer_config is not None:
             if log_once("underlying_buffer_config_not_supported"):
                 logger.info(
@@ -111,6 +110,31 @@ class MultiAgentPrioritizedReplayBuffer(
             **kwargs,
         )
 
+        self._distill_net = ModelCatalog.get_model_v2(
+            self.model.obs_space,
+            self.action_space,
+            self.embed_dim,
+            model_config=self.distill_net_config,
+            framework="torch",
+            name="_noveld_distill_net",
+        )
+        self._distill_target_net = ModelCatalog.get_model_v2(
+            self.model.obs_space,
+            self.action_space,
+            self.embed_dim,
+            model_config=self.distill_net_config,
+            framework="torch",
+            name="_noveld_distill_target_net",
+        )
+
+        # We do not train the target network.
+        distill_params = list(self._distill_net.parameters())
+        # self.model._noveld_distill_net = self._distill_net.to(self.device)
+        self._optimizer = torch.optim.Adam(
+            distill_params,
+            lr=self.lr,
+        )
+
     @DeveloperAPI
     @override(MultiAgentReplayBuffer)
     def _add_to_underlying_buffer(
@@ -130,6 +154,36 @@ class MultiAgentPrioritizedReplayBuffer(
         """
         # Merge kwargs, overwriting standard call arguments
         kwargs = merge_dicts_with_warning(self.underlying_buffer_call_args, kwargs)
+
+        phi, _ = self.model._noveld_distill_net(
+            {
+                SampleBatch.OBS: torch.cat(
+                    [
+                        torch.from_numpy(batch[SampleBatch.OBS]),
+                    ]
+                )
+            }
+        )
+        phi_target, _ = self._distill_target_net(
+            {
+                SampleBatch.OBS: torch.cat(
+                    [
+                        torch.from_numpy(batch[SampleBatch.OBS]),
+                    ]
+                )
+            }
+        )
+
+        distill_rank = torch.norm(phi - phi_target + 1e-12, dim=1)
+        self._distill_rank_np = distill_rank.detach().cpu().numpy()
+
+        # Perform an optimizer step.
+        distill_loss = torch.mean(distill_rank)
+        self._optimizer.zero_grad()
+        distill_loss.backward()
+        self._optimizer.step()
+
+        batch["weights"] = distill_rank.detach().cpu().numpy()
 
         # For the storage unit `timesteps`, the underlying buffer will
         # simply store the samples how they arrive. For sequences and
@@ -178,26 +232,8 @@ class MultiAgentPrioritizedReplayBuffer(
                 else:
                     weight = None
 
-                if "weight" in kwargs and weight is not None:
-                    if log_once("overwrite_weight"):
-                        logger.warning(
-                            "Adding batches with column "
-                            "`weights` to this buffer while "
-                            "providing weights as a call argument "
-                            "to the add method results in the "
-                            "column being overwritten."
-                        )
-
                 kwargs = {"weight": weight, **kwargs}
             else:
-                if "weight" in kwargs:
-                    if log_once("lockstep_no_weight_allowed"):
-                        logger.warning(
-                            "Settings weights for batches in "
-                            "lockstep mode is not allowed."
-                            "Weights are being ignored."
-                        )
-
                 kwargs = {**kwargs, "weight": None}
             self.replay_buffers[policy_id].add(slice, **kwargs)
 
