@@ -10,8 +10,8 @@ from ray.rllib.utils.replay_buffers.multi_agent_replay_buffer import (
     ReplayMode,
     merge_dicts_with_warning,
 )
-from ray.rllib.utils.replay_buffers.prioritized_replay_buffer import (
-    PrioritizedReplayBuffer,
+from ray.rllib.utils.replay_buffers.experimental_replay_buffer import (
+    ExperimentalReplayBuffer,
 )
 from ray.rllib.utils.replay_buffers.replay_buffer import (
     StorageUnit,
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 @DeveloperAPI
 class MultiAgentExperimentalReplayBuffer(
-    MultiAgentReplayBuffer, PrioritizedReplayBuffer
+    MultiAgentReplayBuffer, ExperimentalReplayBuffer
 ):
     def __init__(
         self,
@@ -93,7 +93,7 @@ class MultiAgentExperimentalReplayBuffer(
                 )
         else:
             underlying_buffer_config = {
-                "type": PrioritizedReplayBuffer,
+                "type": ExperimentalReplayBuffer,
             }
 
         shard_capacity = capacity // num_shards
@@ -183,7 +183,7 @@ class MultiAgentExperimentalReplayBuffer(
         distill_loss.backward()
         self._optimizer.step()
 
-        batch["weights"] = distill_rank.detach().cpu().numpy()
+        batch["weights"] = self._distill_rank_np
 
         # For the storage unit `timesteps`, the underlying buffer will
         # simply store the samples how they arrive. For sequences and
@@ -236,23 +236,3 @@ class MultiAgentExperimentalReplayBuffer(
             else:
                 kwargs = {**kwargs, "weight": None}
             self.replay_buffers[policy_id].add(slice, **kwargs)
-
-    @DeveloperAPI
-    @override(PrioritizedReplayBuffer)
-    def update_priorities(self, prio_dict: Dict) -> None:
-        """Updates the priorities of underlying replay buffers.
-
-        Computes new priorities from td_errors and prioritized_replay_eps.
-        These priorities are used to update underlying replay buffers per
-        policy_id.
-
-        Args:
-            prio_dict: A dictionary containing td_errors for
-            batches saved in underlying replay buffers.
-        """
-        with self.update_priorities_timer:
-            for policy_id, (batch_indexes, td_errors) in prio_dict.items():
-                new_priorities = np.abs(td_errors) + self.prioritized_replay_eps
-                self.replay_buffers[policy_id].update_priorities(
-                    batch_indexes, new_priorities
-                )

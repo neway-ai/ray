@@ -1,6 +1,5 @@
 import logging
-import numpy as np
-from typing import List, Union
+from typing import Union
 from sortedcontainers import SortedDict
 
 from ray.rllib.utils.replay_buffers.replay_buffer import ReplayBuffer, StorageUnit, warn_replay_capacity
@@ -27,7 +26,7 @@ class ExperimentalReplayBuffer(ReplayBuffer):
         # Define some metrics.
     
     @DeveloperAPI
-    def add(self, batch: SampleBatchType, distill_ranks: List, **kwargs) -> None:
+    def add(self, batch: SampleBatchType, **kwargs) -> None:
         """Adds a batch of experiences to this buffer.
 
         Splits batch into chunks of timesteps, sequences or episodes, depending on
@@ -42,7 +41,8 @@ class ExperimentalReplayBuffer(ReplayBuffer):
             return
 
         warn_replay_capacity(item=batch, num_items=self.capacity / batch.count)
-
+        
+        distill_ranks = batch["weights"].tolist()
         if self.storage_unit == StorageUnit.TIMESTEPS:
             timeslices = batch.timeslices(1)
             for t, d in zip(timeslices, distill_ranks):
