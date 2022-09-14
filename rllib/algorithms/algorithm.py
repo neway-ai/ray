@@ -2554,7 +2554,12 @@ class Algorithm(Trainable):
             return
 
         buffer_type = config["replay_buffer_config"]["type"]
-        return from_config(buffer_type, config["replay_buffer_config"])
+        experimental_kwargs = {            
+            "model_config": self.config.get("model"),
+            "env": self.config["env"],
+            "framework": self.config["framework"],            
+        }
+        return from_config(buffer_type, config["replay_buffer_config"], **experimental_kwargs)
 
     @DeveloperAPI
     def _kwargs_for_execution_plan(self):

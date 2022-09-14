@@ -39,7 +39,7 @@ class MultiAgentExperimentalReplayBuffer(
         replay_sequence_length: int = 1,
         replay_burn_in: int = 0,
         replay_zero_init_states: bool = True,
-        underlying_buffer_config: dict = None,
+        underlying_buffer_config: dict = None,        
         **kwargs
     ):
         """Initializes a MultiAgentReplayBuffer instance.
@@ -109,9 +109,17 @@ class MultiAgentExperimentalReplayBuffer(
             underlying_buffer_config=underlying_buffer_config,
             **kwargs,
         )
-
+        self.embed_dim = 128
+        self.framework = kwargs.get("framework", None)
+        self.distill_net_config = kwargs.get("model_config", None)
+        env = kwargs.get("env", None)
+        import gym
+        env = gym.make(env)
+        self.obs_space = env.observation_space
+        self.action_space = env.action_space
+        
         self._distill_net = ModelCatalog.get_model_v2(
-            self.model.obs_space,
+            self.obs_space,
             self.action_space,
             self.embed_dim,
             model_config=self.distill_net_config,
@@ -119,7 +127,7 @@ class MultiAgentExperimentalReplayBuffer(
             name="_noveld_distill_net",
         )
         self._distill_target_net = ModelCatalog.get_model_v2(
-            self.model.obs_space,
+            self.obs_space,
             self.action_space,
             self.embed_dim,
             model_config=self.distill_net_config,
@@ -132,7 +140,7 @@ class MultiAgentExperimentalReplayBuffer(
         # self.model._noveld_distill_net = self._distill_net.to(self.device)
         self._optimizer = torch.optim.Adam(
             distill_params,
-            lr=self.lr,
+            lr=0.0005,
         )
 
     @DeveloperAPI
@@ -155,7 +163,7 @@ class MultiAgentExperimentalReplayBuffer(
         # Merge kwargs, overwriting standard call arguments
         kwargs = merge_dicts_with_warning(self.underlying_buffer_call_args, kwargs)
 
-        phi, _ = self.model._noveld_distill_net(
+        phi, _ = self._distill_net(
             {
                 SampleBatch.OBS: torch.cat(
                     [
@@ -183,7 +191,7 @@ class MultiAgentExperimentalReplayBuffer(
         distill_loss.backward()
         self._optimizer.step()
 
-        batch["weights"] = self._distill_rank_np
+        batch["distill_ranks"] = self._distill_rank_np
 
         # For the storage unit `timesteps`, the underlying buffer will
         # simply store the samples how they arrive. For sequences and

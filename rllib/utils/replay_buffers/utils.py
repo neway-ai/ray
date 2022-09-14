@@ -306,7 +306,12 @@ def validate_buffer_config(config: dict) -> None:
 
     # Instantiate a dummy buffer to fail early on misconfiguration and find out about
     # inferred buffer class
-    dummy_buffer = from_config(buffer_type, config["replay_buffer_config"])
+    buffer_kwargs = {
+        "model_config": config["model"],
+        "env": config["env"],
+        "framework": config["framework"],
+    }
+    dummy_buffer = from_config(buffer_type, config["replay_buffer_config"], **buffer_kwargs)
 
     config["replay_buffer_config"]["type"] = type(dummy_buffer)
 
