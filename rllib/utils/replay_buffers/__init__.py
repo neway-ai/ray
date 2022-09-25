@@ -2,6 +2,7 @@ from ray.rllib.utils.replay_buffers.experimental_replay_buffer import Experiment
 from ray.rllib.utils.replay_buffers.multi_agent_experimental_replay_buffer import (
     MultiAgentExperimentalReplayBuffer,
 )
+from ray.rllib.utils.replay_buffers.fifo_replay_buffer import FifoReplayBuffer
 from ray.rllib.utils.replay_buffers.multi_agent_mixin_replay_buffer import (
     MultiAgentMixInReplayBuffer,
 )
@@ -20,6 +21,7 @@ from ray.rllib.utils.replay_buffers.reservoir_replay_buffer import ReservoirRepl
 from ray.rllib.utils.replay_buffers import utils
 
 __all__ = [
+    "FifoReplayBuffer",
     "ExperimentalReplayBuffer",
     "MultiAgentExperimentalReplayBuffer",
     "MultiAgentMixInReplayBuffer",
@@ -30,6 +32,5 @@ __all__ = [
     "ReplayBuffer",
     "ReservoirReplayBuffer",
     "StorageUnit",
-    "MultiAgentPrioritizedReplayBuffer",
     "utils",
 ]
