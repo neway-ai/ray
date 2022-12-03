@@ -11,15 +11,17 @@ class TestExperimentalReplayBuffer(unittest.TestCase):
         action_space = dummy_env.action_space
         observation_space = dummy_env.observation_space
 
-        config = DQNConfig().environment(env="CartPole-v0",
-                                         observation_space=observation_space,
-                                         action_space=action_space)
+        config = DQNConfig().environment(
+            env="CartPole-v0",
+            observation_space=observation_space,
+            action_space=action_space,
+        )
 
         buffer_config = {
-                "type": "MultiAgentExperimentalReplayBuffer",
-                "observation_space": observation_space,
-                "action_space": action_space,
-                "model_config": config.model,
+            "type": "MultiAgentExperimentalReplayBuffer",
+            "observation_space": observation_space,
+            "action_space": action_space,
+            "model_config": config.model,
         }
         stop_config = {
             "training_iteration": 10,

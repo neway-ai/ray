@@ -4,6 +4,7 @@ import torch
 
 from ray.rllib.utils.annotations import override
 from ray.rllib.models.catalog import ModelCatalog
+from ray.rllib.models.preprocessors import get_preprocessor
 from ray.rllib.utils.replay_buffers.multi_agent_replay_buffer import (
     MultiAgentReplayBuffer,
     ReplayMode,
@@ -115,8 +116,21 @@ class MultiAgentExperimentalReplayBuffer(
         import gym
 
         env = gym.make(env)
-        self.obs_space = env.observation_space
         self.action_space = env.action_space
+        from ray.rllib.env.wrappers.atari_wrappers import is_atari, wrap_deepmind
+
+        if is_atari(env):
+            env = wrap_deepmind(
+                env,
+                dim=self.distill_net_config["dim"],
+                framestack=self.distill_net_config.get("framestack"),
+            )
+            self.obs_space = env.observation_space
+        else:
+            self.pp = get_preprocessor(space=env.observation_space)(
+                env.observation_space
+            )
+            self.obs_space = self.pp.observation_space
 
         self._distill_net = ModelCatalog.get_model_v2(
             self.obs_space,
@@ -163,24 +177,17 @@ class MultiAgentExperimentalReplayBuffer(
         # Merge kwargs, overwriting standard call arguments
         kwargs = merge_dicts_with_warning(self.underlying_buffer_call_args, kwargs)
 
-        phi, _ = self._distill_net(
-            {
-                SampleBatch.OBS: torch.cat(
-                    [
-                        torch.from_numpy(batch[SampleBatch.OBS]),
-                    ]
-                )
-            }
-        )
-        phi_target, _ = self._distill_target_net(
-            {
-                SampleBatch.OBS: torch.cat(
-                    [
-                        torch.from_numpy(batch[SampleBatch.OBS]),
-                    ]
-                )
-            }
-        )
+        if hasattr(self, "pp"):
+            transformed = self.pp.transform(batch[SampleBatch.OBS])
+        else:
+            transformed = batch[SampleBatch.OBS]
+
+        preprocessed_batch = {
+            SampleBatch.OBS: torch.from_numpy(transformed),
+        }
+
+        phi, _ = self._distill_net(preprocessed_batch)
+        phi_target, _ = self._distill_target_net(preprocessed_batch)
 
         distill_rank = torch.norm(phi - phi_target + 1e-12, dim=1)
         self._distill_rank_np = distill_rank.detach().cpu().numpy()
