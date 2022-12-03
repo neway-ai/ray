@@ -113,7 +113,10 @@ class WorkerPoolInterface {
   /// Get all the registered workers.
   ///
   /// \param filter_dead_workers whether or not if this method will filter dead workers
-  /// that are still registered. \return A list containing all the workers.
+  /// \param filter_io_workers whether or not if this method will filter io workers
+  /// non-retriable workers that are still registered.
+  ///
+  /// \return A list containing all the workers.
   virtual const std::vector<std::shared_ptr<WorkerInterface>> GetAllRegisteredWorkers(
       bool filter_dead_workers = false, bool filter_io_workers = false) const = 0;
 
@@ -360,14 +363,19 @@ class WorkerPool : public WorkerPoolInterface, public IOWorkerPoolInterface {
   /// Get all the registered workers.
   ///
   /// \param filter_dead_workers whether or not if this method will filter dead workers
-  /// that are still registered. \return A list containing all the workers.
+  /// \param filter_io_workers whether or not if this method will filter io workers
+  /// non-retriable workers that are still registered.
+  ///
+  /// \return A list containing all the workers.
   const std::vector<std::shared_ptr<WorkerInterface>> GetAllRegisteredWorkers(
       bool filter_dead_workers = false, bool filter_io_workers = false) const;
 
   /// Get all the registered drivers.
   ///
   /// \param filter_dead_drivers whether or not if this method will filter dead drivers
-  /// that are still registered. \return A list containing all the drivers.
+  /// that are still registered.
+  ///
+  /// \return A list containing all the drivers.
   const std::vector<std::shared_ptr<WorkerInterface>> GetAllRegisteredDrivers(
       bool filter_dead_drivers = false) const;
 
@@ -431,6 +439,10 @@ class WorkerPool : public WorkerPoolInterface, public IOWorkerPoolInterface {
                                  std::shared_ptr<WorkerInterface> worker,
                                  PopWorkerStatus status);
 
+  /// Look up worker's dynamic options by startup token.
+  /// TODO(scv119): replace dynamic options by runtime_env.
+  const std::vector<std::string> &LookupWorkerDynamicOptions(StartupToken token) const;
+
   /// Gloabl startup token variable. Incremented once assigned
   /// to a worker process and is added to
   /// state.worker_processes.
@@ -462,6 +474,8 @@ class WorkerPool : public WorkerPoolInterface, public IOWorkerPoolInterface {
     std::chrono::high_resolution_clock::time_point start_time;
     /// The runtime env Info.
     rpc::RuntimeEnvInfo runtime_env_info;
+    /// The dynamic_options.
+    std::vector<std::string> dynamic_options;
   };
 
   struct TaskWaitingForWorkerInfo {
@@ -482,10 +496,7 @@ class WorkerPool : public WorkerPoolInterface, public IOWorkerPoolInterface {
   struct State {
     /// The commands and arguments used to start the worker process
     std::vector<std::string> worker_command;
-    /// The pool of dedicated workers for actor creation tasks
-    /// with dynamic worker options (prefix or suffix worker command.)
-    absl::flat_hash_map<TaskID, std::shared_ptr<WorkerInterface>> idle_dedicated_workers;
-    /// The pool of idle non-actor workers.
+    /// The pool of idle workers.
     std::unordered_set<std::shared_ptr<WorkerInterface>> idle;
     // States for io workers used for python util functions.
     IOWorkerState util_io_worker_state;
@@ -507,11 +518,6 @@ class WorkerPool : public WorkerPoolInterface, public IOWorkerPoolInterface {
     absl::flat_hash_map<StartupToken, WorkerProcessInfo> worker_processes;
     /// A map for looking up the task by the startup token of starting worker process.
     absl::flat_hash_map<StartupToken, TaskWaitingForWorkerInfo> starting_workers_to_tasks;
-    /// A map for looking up the task with dynamic options by the startup token of
-    /// starting worker process. Note that this is used for the dedicated worker
-    /// processes.
-    absl::flat_hash_map<StartupToken, TaskWaitingForWorkerInfo>
-        starting_dedicated_workers_to_tasks;
     /// Pop worker requests that are pending due to maximum_startup_concurrency_.
     std::deque<PopWorkerRequest> pending_pop_worker_requests;
     /// We'll push a warning to the user every time a multiple of this many
@@ -676,13 +682,24 @@ class WorkerPool : public WorkerPoolInterface, public IOWorkerPoolInterface {
                         const rpc::WorkerType worker_type,
                         const Process &proc,
                         const std::chrono::high_resolution_clock::time_point &start,
-                        const rpc::RuntimeEnvInfo &runtime_env_info);
+                        const rpc::RuntimeEnvInfo &runtime_env_info,
+                        const std::vector<std::string> &dynamic_options);
 
   void RemoveWorkerProcess(State &state, const StartupToken &proc_startup_token);
 
   /// Increase worker OOM scores to avoid raylet crashes from heap memory
   /// pressure.
   void AdjustWorkerOomScore(pid_t pid) const;
+
+  std::pair<std::vector<std::string>, ProcessEnvironment> BuildProcessCommandArgs(
+      const Language &language,
+      rpc::JobConfig *job_config,
+      const rpc::WorkerType worker_type,
+      const JobID &job_id,
+      const std::vector<std::string> &dynamic_options,
+      const int runtime_env_hash,
+      const std::string &serialized_runtime_env_context,
+      const WorkerPool::State &state) const;
 
   /// For Process class for managing subprocesses (e.g. reaping zombies).
   instrumented_io_context *io_service_;

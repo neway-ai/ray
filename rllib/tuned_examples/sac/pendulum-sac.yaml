@@ -9,8 +9,6 @@ pendulum-sac:
     config:
         # Works for both torch and tf.
         framework: tf
-        horizon: 200
-        soft_horizon: false
         q_model_config:
           fcnet_activation: relu
           fcnet_hiddens: [256, 256]
@@ -34,4 +32,4 @@ pendulum-sac:
           entropy_learning_rate: 0.0003
         num_workers: 0
         num_gpus: 0
-        metrics_smoothing_episodes: 5
+        metrics_num_episodes_for_smoothing: 5

@@ -36,6 +36,14 @@ projects:
     website: https://github.com/asappresearch/flambe
     repo: https://github.com/asappresearch/flambe
     image: ../images/flambe.png
+  - name: Flyte Integration
+    section_title: Flyte
+    description: Flyte is a Kubernetes-native workflow automation platform for complex,
+      mission-critical data and ML processes at scale. It has been battle-tested
+      at Lyft, Spotify, Freenome, and others and is truly open-source.
+    website: https://flyte.org/
+    repo: https://github.com/flyteorg/flyte
+    image: ../images/flyte.png
   - name: Horovod Integration
     section_title: Horovod
     description: Horovod is a distributed deep learning training framework for
@@ -93,6 +101,15 @@ projects:
     website: https://github.com/modin-project/modin
     repo: https://github.com/modin-project/modin
     image: ../images/modin.png
+  - name: Prefect Integration
+    section_title: Prefect
+    description: Prefect is an open source workflow orchestration platform in Python.
+      It allows you to easily define, track and schedule workflows in Python. This
+      integration makes it easy to run a Prefect workflow on a Ray cluster in a
+      distributed way.
+    website: https://github.com/PrefectHQ/prefect-ray
+    repo: https://github.com/PrefectHQ/prefect-ray
+    image: ../images/prefect.png
   - name: PyCaret Integration
     section_title: PyCaret
     description: PyCaret is an open source low-code machine learning library in Python
@@ -118,8 +135,8 @@ projects:
       SQL, Spark DataFrame, or Pandas (via Koalas) API, extract and transform features
       using Spark MLLib, and use RayDP Estimator API for distributed training
       on the preprocessed dataset.
-    website: https://github.com/Intel-bigdata/oap-raydp <https://github.com/Intel-bigdata/oap-raydp
-    repo: https://github.com/Intel-bigdata/oap-raydp <https://github.com/Intel-bigdata/oap-raydp
+    website: https://github.com/Intel-bigdata/oap-raydp
+    repo: https://github.com/Intel-bigdata/oap-raydp
     image: ../images/intel.png
   - name: Scikit Learn Integration
     section_title: Scikit Learn

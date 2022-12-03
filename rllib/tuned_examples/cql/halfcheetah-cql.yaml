@@ -15,8 +15,6 @@ halfcheetah_cql:
 
         # Works for both torch and tf.
         framework: tf
-        soft_horizon: False
-        horizon: 1000
         q_model_config:
             fcnet_activation: relu
             fcnet_hiddens: [256, 256, 256]
@@ -40,7 +38,7 @@ halfcheetah_cql:
             entropy_learning_rate: 0.0001
         num_workers: 0
         num_gpus: 1
-        metrics_smoothing_episodes: 5
+        metrics_num_episodes_for_smoothing: 5
         # CQL Configs
         min_q_weight: 5.0
         bc_iters: 20000
