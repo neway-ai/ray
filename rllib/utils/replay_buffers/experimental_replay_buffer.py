@@ -24,58 +24,6 @@ class ExperimentalReplayBuffer(ReplayBuffer):
         self._hit = False
         
         # Define some metrics.
-    
-    @DeveloperAPI
-    def add(self, batch: SampleBatchType, **kwargs) -> None:
-        """Adds a batch of experiences to this buffer.
-
-        Splits batch into chunks of timesteps, sequences or episodes, depending on
-        `self._storage_unit`. Calls `self._add_single_batch` to add resulting slices
-        to the buffer storage.
-
-        Args:
-            batch: Batch to add.
-            ``**kwargs``: Forward compatibility kwargs.
-        """
-        if not batch.count > 0:
-            return
-
-        warn_replay_capacity(item=batch, num_items=self.capacity / batch.count)
-        
-        distill_ranks = batch["distill_ranks"].tolist()
-        if self.storage_unit == StorageUnit.TIMESTEPS:
-            timeslices = batch.timeslices(1)
-            for t, d in zip(timeslices, distill_ranks):
-                self._add_single_batch(t, d, **kwargs)
-
-        elif self.storage_unit == StorageUnit.SEQUENCES:
-            timestep_count = 0
-            for seq_len in batch.get(SampleBatch.SEQ_LENS):
-                start_seq = timestep_count
-                end_seq = timestep_count + seq_len
-                self._add_single_batch(batch[start_seq:end_seq], **kwargs)
-                timestep_count = end_seq
-
-        elif self.storage_unit == StorageUnit.EPISODES:
-            for eps in batch.split_by_episode():
-                if (
-                    eps.get(SampleBatch.T, [0])[0] == 0
-                    and eps.get(SampleBatch.DONES, [True])[-1] == True  # noqa E712
-                ):
-                    # Only add full episodes to the buffer
-                    # Check only if info is available
-                    self._add_single_batch(eps, **kwargs)
-                else:
-                    if log_once("only_full_episodes"):
-                        logger.info(
-                            "This buffer uses episodes as a storage "
-                            "unit and thus allows only full episodes "
-                            "to be added to it. Some samples may be "
-                            "dropped."
-                        )
-
-        elif self.storage_unit == StorageUnit.FRAGMENTS:
-            self._add_single_batch(batch, **kwargs)
 
     @DeveloperAPI
     def _add_single_batch(self, item: SampleBatchType, **kwargs) -> None:
