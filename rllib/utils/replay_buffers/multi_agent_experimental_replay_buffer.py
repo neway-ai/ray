@@ -138,7 +138,7 @@ class MultiAgentExperimentalReplayBuffer(
             self.embed_dim,
             model_config=self.distill_net_config,
             framework="torch",
-            name="_noveld_distill_net",
+            name="_distill_net",
         )
         self._distill_target_net = ModelCatalog.get_model_v2(
             self.obs_space,
@@ -146,7 +146,7 @@ class MultiAgentExperimentalReplayBuffer(
             self.embed_dim,
             model_config=self.distill_net_config,
             framework="torch",
-            name="_noveld_distill_target_net",
+            name="_distill_target_net",
         )
 
         # We do not train the target network.
