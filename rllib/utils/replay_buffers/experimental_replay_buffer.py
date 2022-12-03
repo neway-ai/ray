@@ -42,7 +42,7 @@ class ExperimentalReplayBuffer(ReplayBuffer):
 
         warn_replay_capacity(item=batch, num_items=self.capacity / batch.count)
         
-        distill_ranks = batch["weights"].tolist()
+        distill_ranks = batch["distill_ranks"].tolist()
         if self.storage_unit == StorageUnit.TIMESTEPS:
             timeslices = batch.timeslices(1)
             for t, d in zip(timeslices, distill_ranks):
