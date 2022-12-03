@@ -93,7 +93,7 @@ from ray.rllib.utils.metrics import (
 )
 from ray.rllib.utils.metrics.learner_info import LEARNER_INFO
 from ray.rllib.utils.policy import validate_policy_id
-from ray.rllib.utils.replay_buffers import MultiAgentReplayBuffer, ReplayBuffer
+from ray.rllib.utils.replay_buffers import MultiAgentReplayBuffer
 from ray.rllib.utils.spaces import space_utils
 from ray.rllib.utils.typing import (
     AgentConnectorDataType,
@@ -2627,7 +2627,9 @@ class Algorithm(Trainable):
             "env": self.config["env"],
             "framework": self.config["framework"],
         }
-        return from_config(buffer_type, config["replay_buffer_config"], **experimental_kwargs)
+        return from_config(
+            buffer_type, config["replay_buffer_config"], **experimental_kwargs
+        )
 
     @DeveloperAPI
     def _kwargs_for_execution_plan(self):

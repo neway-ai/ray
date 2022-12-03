@@ -1,4 +1,3 @@
-from typing import Dict
 import logging
 import numpy as np
 import torch
@@ -39,7 +38,7 @@ class MultiAgentExperimentalReplayBuffer(
         replay_sequence_length: int = 1,
         replay_burn_in: int = 0,
         replay_zero_init_states: bool = True,
-        underlying_buffer_config: dict = None,        
+        underlying_buffer_config: dict = None,
         **kwargs
     ):
         """Initializes a MultiAgentReplayBuffer instance.
@@ -114,10 +113,11 @@ class MultiAgentExperimentalReplayBuffer(
         self.distill_net_config = kwargs.get("model_config", None)
         env = kwargs.get("env", None)
         import gym
+
         env = gym.make(env)
         self.obs_space = env.observation_space
         self.action_space = env.action_space
-        
+
         self._distill_net = ModelCatalog.get_model_v2(
             self.obs_space,
             self.action_space,

@@ -2,16 +2,17 @@ import logging
 from typing import Union
 from sortedcontainers import SortedDict
 
-from ray.rllib.utils.replay_buffers.replay_buffer import ReplayBuffer, StorageUnit, warn_replay_capacity
-from ray.rllib.policy.sample_batch import SampleBatch
-from ray.util.debug import log_once
+from ray.rllib.utils.replay_buffers.replay_buffer import (
+    ReplayBuffer,
+    StorageUnit,
+)
 from ray.util.annotations import DeveloperAPI
-from ray.rllib.utils.typing import SampleBatchType, T
+from ray.rllib.utils.typing import SampleBatchType
 
 logger = logging.getLogger(__name__)
 
+
 class ExperimentalReplayBuffer(ReplayBuffer):
-    
     def __init__(
         self,
         capacity: int = 10000,
@@ -19,10 +20,10 @@ class ExperimentalReplayBuffer(ReplayBuffer):
         **kwargs,
     ):
         super().__init__(capacity=capacity, storage_unit=storage_unit, **kwargs)
-        
+
         self._distill_index_map = SortedDict()
         self._hit = False
-        
+
         # Define some metrics.
 
     @DeveloperAPI
@@ -45,7 +46,7 @@ class ExperimentalReplayBuffer(ReplayBuffer):
             self._storage.append(item)
             self._distill_index_map.setdefault(distill_rank, self._next_idx)
             self._est_size_bytes += item.size_bytes()
-        else:                        
+        else:
             if distill_rank >= self._distill_index_map.peekitem(0)[0]:
                 self._hit = True
                 _, item_to_be_removed_idx = self._distill_index_map.popitem(0)
@@ -58,7 +59,7 @@ class ExperimentalReplayBuffer(ReplayBuffer):
                 self._hit = False
 
         # Eviction of older samples has already started (buffer is "full").
-        if self._eviction_started & self._hit:        
+        if self._eviction_started & self._hit:
             self._evicted_hit_stats.push(self._hit_count[item_to_be_removed_idx])
             self._hit_count[item_to_be_removed_idx] = 0
             self._hit = False

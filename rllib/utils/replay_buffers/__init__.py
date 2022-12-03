@@ -1,4 +1,6 @@
-from ray.rllib.utils.replay_buffers.experimental_replay_buffer import ExperimentalReplayBuffer
+from ray.rllib.utils.replay_buffers.experimental_replay_buffer import (
+    ExperimentalReplayBuffer,
+)
 from ray.rllib.utils.replay_buffers.multi_agent_experimental_replay_buffer import (
     MultiAgentExperimentalReplayBuffer,
 )
